@@ -1,0 +1,80 @@
+app-id: io.github.quickemu-project.quickGui.yaml
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+command: 'true'
+finish-args:
+  - --device=kvm
+  - --device=dri
+#  - --share=ipc
+  - --share=network
+
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --socket=x11
+#cleanup:
+#  - /include
+#  - /lib/pkgconfig
+#  - /share/man
+#  - '*.a'
+#  - '*.la'
+
+modules:
+  - name: quickGUi
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 -t /app/bin/
+          apply_extra quickgui stub_sandbox
+#      - |
+#        for s in 16 32 48 64 128 256 512; do
+#          install -Dm644 ${s}.png /app/share/icons/hicolor/${s}x${s}/apps/${FLATPAK_ID}.png
+#        done
+#      - install -Dm644 ${FLATPAK_ID}.desktop -t /app/share/applications/
+    sources:
+      - type: extra-data
+        filename: appimage
+        url: https://github.com/quickemu-project/quickgui/releases/download/1.2.10/quickgui-1.2.10+1-linux.AppImage
+        sha256: 8180894142c2a5ac54bef6c15e5dd5c7ace7fbf88dc011ba15c2565cd693717a
+      - type: script
+        dest-filename: apply_extra
+        commands:
+          - unappimage appimage &>/dev/null
+          - rm -f appimage
+          - rm -f squashfs-root/{.DirIcon,AppRun,expandrive.desktop,expandrive.png}
+          - rm -f squashfs-root/{libEGL.so,libGLESv2.so,libvulkan.so.1}
+          - rm -f squashfs-root/SharedSupport/*.dll
+          - rm -rf squashfs-root/{branding,usr}
+          - mv squashfs-root/* ./
+          - rmdir squashfs-root
+          - install -Dm755 /app/bin/stub_sandbox chrome-sandbox
+      - type: script
+        dest-filename: expandrive
+        commands:
+          - export TMPDIR=$XDG_RUNTIME_DIR/app/$FLATPAK_ID
+          - exec zypak-wrapper /app/extra/expandrive "$@"
+      - type: script
+        dest-filename: stub_sandbox
+        commands:
+          - |
+            echo Stub sandbox ignoring command: $@
+            exit 1
+#      - type: file
+#        path: com.expandrive.expandrive.desktop
+#      - type: file
+#        path: icons/16.png
+#      - type: file
+#        path: icons/32.png
+#      - type: file
+#        path: icons/48.png
+#      - type: file
+#        path: icons/64.png
+#      - type: file
+#        path: icons/128.png
+#      - type: file
+#        path: icons/256.png
+#      - type: file
+#        path: icons/512.png
+    modules:
+#      - ../flathub-shared-modules/libsecret/libsecret.json
+      - shared-modules/fuse/fuse2.json
+      - shared-modules/unappimage/unappimage.json
